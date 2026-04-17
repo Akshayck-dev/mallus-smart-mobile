@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 
 class ShimmerLoader extends StatefulWidget {
   final double width;
@@ -48,10 +48,10 @@ class _ShimmerLoaderState extends State<ShimmerLoader>
     // Industrial Palette
     final baseColor = isDark 
         ? CuratorDesign.darkSurfaceLow 
-        : Colors.black.withOpacity(0.06);
+        : Colors.black.withValues(alpha: 0.06);
     final highlightColor = isDark 
         ? const Color(0xFF2A2A2A) // Metal shine
-        : Colors.black.withOpacity(0.02);
+        : Colors.black.withValues(alpha: 0.02);
 
     return AnimatedBuilder(
       animation: _animation,

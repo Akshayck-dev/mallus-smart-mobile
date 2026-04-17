@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 
 class SearchBarSliver extends StatelessWidget {
   const SearchBarSliver({super.key});
@@ -18,13 +18,13 @@ class SearchBarSliver extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isDark 
-                  ? Colors.white.withOpacity(0.05) 
-                  : Colors.black.withOpacity(0.05),
+                  ? Colors.white.withValues(alpha: 0.05) 
+                  : Colors.black.withValues(alpha: 0.05),
               width: 1.5,
             ),
             boxShadow: isDark ? [] : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 15,
                 offset: const Offset(0, 5),
               )
@@ -55,7 +55,7 @@ class SearchBarSliver extends StatelessWidget {
                 margin: const EdgeInsets.all(8),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: CuratorDesign.primaryOrange.withOpacity(0.1),
+                  color: CuratorDesign.primaryOrange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(

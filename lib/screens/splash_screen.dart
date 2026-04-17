@@ -1,8 +1,7 @@
-import 'dart:math' as math;
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:mallu_smart/utils/design_system.dart';
 import 'package:mallu_smart/screens/onboarding_screen.dart';
 import 'package:mallu_smart/widgets/main_navigation.dart';
 
@@ -13,195 +12,189 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
   @override
   void initState() {
     super.initState();
-    _navigateToOnboarding();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _controller.forward();
+
+    // Navigate after animation and logic
+    Timer(const Duration(seconds: 3), () {
+      _navigateToNext();
+    });
   }
 
-  _navigateToOnboarding() async {
-    await Future.delayed(const Duration(milliseconds: 3500));
-    if (!mounted) return;
-
+  Future<void> _navigateToNext() async {
     final prefs = await SharedPreferences.getInstance();
     final bool isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
-    Widget nextScreen = isFirstLaunch ? const OnboardingScreen() : const MainNavigation();
 
-    Navigator.pushReplacement(
-      context,
+    if (!mounted) return;
+
+    Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => nextScreen,
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            isFirstLaunch ? const OnboardingScreen() : const MainNavigation(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
-        transitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: const Duration(milliseconds: 1000),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Subtle Kerala-inspired background pattern
-          Positioned.fill(
-            child: CustomPaint(
-              painter: PatternPainter(),
-            ),
-          ).animate().fadeIn(duration: 1500.ms),
-
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo Container with a premium glow
-                Container(
-                  width: 220,
-                  height: 220,
-                  decoration: BoxDecoration(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFF1B5E20), // Deep Forest Green
+              const Color(0xFF0C1409), // Darker depth
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Subtle ambient background pattern or circles could go here
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Opacity(
+                opacity: 0.1,
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: const BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: CuratorDesign.primaryOrange.withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.storefront_rounded, 
-                                size: 80, 
-                                color: CuratorDesign.primaryOrange
-                              ),
-                              const SizedBox(height: 8),
-                              Text('LOGO HERE', 
-                                style: CuratorDesign.label(10, color: CuratorDesign.textLight)
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ).animate()
-                 .scale(duration: 1000.ms, curve: Curves.easeOutBack)
-                 .fadeIn(duration: 800.ms)
-                 .shimmer(delay: 1500.ms, duration: 2000.ms, color: Colors.white54),
-                
-                const SizedBox(height: 50),
-                
-                // Animated Branding
-                Column(
-                  children: [
-                    Text(
-                      'MALLU\'S MART',
-                      style: CuratorDesign.display(32, color: CuratorDesign.textDark)
-                          .copyWith(letterSpacing: 4, fontWeight: FontWeight.w900),
-                    ).animate()
-                     .slideY(begin: 0.5, duration: 800.ms, delay: 500.ms)
-                     .fadeIn(duration: 800.ms, delay: 500.ms),
-                    
-                    const SizedBox(height: 12),
-                    
-                    Container(
-                      height: 2,
-                      width: 40,
-                      color: CuratorDesign.primaryOrange,
-                    ).animate()
-                     .scaleX(begin: 0, duration: 600.ms, delay: 1000.ms),
-                    
-                    const SizedBox(height: 12),
-                    
-                    Text(
-                      'KERALA HOMEPRENEURS UNITED',
-                      style: CuratorDesign.label(12, color: CuratorDesign.textLight)
-                          .copyWith(letterSpacing: 2),
-                    ).animate()
-                     .slideY(begin: 1.0, duration: 800.ms, delay: 1200.ms)
-                     .fadeIn(duration: 800.ms, delay: 1200.ms),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          // Bottom subtle indicator
-          Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    CuratorDesign.primaryOrange.withValues(alpha: 0.3)
                   ),
                 ),
               ),
-            ).animate()
-             .fadeIn(delay: 2000.ms),
-          ),
-        ],
+            ),
+            
+            Center(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Hero(
+                          tag: 'app_logo',
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            height: 120,
+                            errorBuilder: (context, error, stackTrace) => 
+                               const Icon(Icons.shopping_bag_rounded, size: 80, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
+                        children: [
+                          Text(
+                            "Mallu Smart",
+                            style: GoogleFonts.outfit(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Kerala Homepreneurs United",
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withValues(alpha: 0.6),
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Bottom indicator (optional)
+            Positioned(
+              bottom: 50,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SizedBox(
+                    width: 40,
+                    height: 2,
+                    child: LinearProgressIndicator(
+                      backgroundColor: Colors.white.withValues(alpha: 0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-class PatternPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = CuratorDesign.primaryOrange.withValues(alpha: 0.03)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    const spacing = 60.0;
-    for (double i = 0; i < size.width + spacing; i += spacing) {
-      for (double j = 0; j < size.height + spacing; j += spacing) {
-        // Draw a subtle leaf-like motif or geometric pattern
-        _drawMotif(canvas, Offset(i, j), paint);
-      }
-    }
-  }
-
-  void _drawMotif(Canvas canvas, Offset center, Paint paint) {
-    final path = Path();
-    const size = 15.0;
-    
-    // Subtle diamond/leaf shape
-    path.moveTo(center.dx, center.dy - size);
-    path.quadraticBezierTo(center.dx + size, center.dy, center.dx, center.dy + size);
-    path.quadraticBezierTo(center.dx - size, center.dy, center.dx, center.dy - size);
-    
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(math.pi / 4);
-    canvas.translate(-center.dx, -center.dy);
-    canvas.drawPath(path, paint);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

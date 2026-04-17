@@ -1,116 +1,64 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/providers/product_provider.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 import 'package:mallu_smart/widgets/product_card.dart';
-import 'package:mallu_smart/widgets/search_bar_sliver.dart';
-import 'package:mallu_smart/widgets/category_selector.dart';
-import 'package:mallu_smart/data/sample_data.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
+import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleRefresh() async {
-    await Future.delayed(const Duration(seconds: 2));
-    // Data refresh logic would go here
-  }
+class HomeScreen extends StatelessWidget {
+  final VoidCallback? openDrawer;
+  const HomeScreen({super.key, this.openDrawer});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: RefreshIndicator(
-        color: CuratorDesign.primaryOrange,
-        backgroundColor: Colors.white,
-        displacement: 40,
-        strokeWidth: 3,
-        onRefresh: _handleRefresh,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-          slivers: [
-            const _PremiumAppBar(),
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _HeroGreeting(),
-                  const SizedBox(height: 24),
-                  _ParallaxFeaturedBanner(scrollController: _scrollController),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-            const SearchBarSliver(),
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  CategorySelector(
-                    categories: const ['All', 'Fruits', 'Bakery', 'Groceries', 'Meat', 'Fashion'],
-                    onCategorySelected: (category) {
-                      // Filter logic would go here
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                  const _SectionHeader(title: 'NEW ARRIVALS', actionText: 'SEE ALL'),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-            const _ProductGrid(),
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
-          ],
-        ),
-      ),
+      backgroundColor: CuratorDesign.surfaceColor(context),
+      appBar: _buildAppBar(context),
+      body: const HomeContent(),
     );
   }
-}
 
-class _PremiumAppBar extends StatelessWidget {
-  const _PremiumAppBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: true,
-      pinned: true,
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      backgroundColor: Colors.white,
-      leading: IconButton(
-        icon: const Icon(Icons.menu_rounded, color: CuratorDesign.textDark),
-        onPressed: () => Scaffold.of(context).openDrawer(),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        centerTitle: false,
-        titlePadding: const EdgeInsets.only(left: 60, bottom: 16),
-        title: Text(
-          "MALLU'S MART",
-          style: CuratorDesign.display(18, color: CuratorDesign.textDark).copyWith(letterSpacing: 2),
+      centerTitle: false,
+      leading: Bounceable(
+        onTap: openDrawer ?? () {},
+        child: Container(
+          margin: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: CuratorDesign.surfaceLowColor(context),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.menu_rounded, color: CuratorDesign.primary, size: 22),
         ),
-        background: Container(color: Colors.white),
+      ),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Welcome to",
+            style: CuratorDesign.subtitle(color: CuratorDesign.textSecondary(context)).copyWith(fontSize: 12),
+          ),
+          Text(
+            "Mallu Smart",
+            style: CuratorDesign.heading(color: CuratorDesign.primary).copyWith(fontSize: 18),
+          ),
+        ],
       ),
       actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: IconButton(
-            icon: const Icon(Icons.notifications_none_rounded, color: CuratorDesign.textDark),
-            onPressed: () {},
+        Bounceable(
+          onTap: () {},
+          child: Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: CuratorDesign.surfaceLowColor(context),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.notifications_none_rounded, color: CuratorDesign.primary, size: 22),
           ),
         ),
       ],
@@ -118,169 +66,300 @@ class _PremiumAppBar extends StatelessWidget {
   }
 }
 
-class _HeroGreeting extends StatelessWidget {
-  const _HeroGreeting();
+class HomeContent extends StatefulWidget {
+  const HomeContent({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 12,
-                height: 2,
-                color: CuratorDesign.primaryOrange,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'CURATED FRESHNESS',
-                style: CuratorDesign.label(10, color: CuratorDesign.primaryOrange),
-              ),
-            ],
-          ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.2),
-          const SizedBox(height: 8),
-          RichText(
-            text: TextSpan(
-              style: CuratorDesign.display(32, color: CuratorDesign.textDark),
-              children: const [
-                TextSpan(text: 'Taste the\n'),
-                TextSpan(
-                  text: 'Premium Life',
-                  style: TextStyle(color: CuratorDesign.primaryOrange, fontStyle: FontStyle.italic),
-                ),
-              ],
-            ),
-          ).animate().fadeIn(delay: 200.ms, duration: 800.ms).slideY(begin: 0.1),
-        ],
-      ),
-    );
-  }
+  State<HomeContent> createState() => _HomeContentState();
 }
 
-class _ParallaxFeaturedBanner extends StatelessWidget {
-  final ScrollController scrollController;
-  
-  const _ParallaxFeaturedBanner({required this.scrollController});
+class _HomeContentState extends State<HomeContent> {
+  String _selectedCategory = "All";
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() => _searchQuery = _searchController.text.trim().toLowerCase());
+    });
+    
+    // 🧠 Initial fetch is now handled by the Provider's Firebase Sync engine
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   context.read<ProductProvider>().syncApiToFirebase();
+    // });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
-        child: SizedBox(
-          width: double.infinity,
-          height: 200,
-          child: Stack(
+    final productProvider = context.watch<ProductProvider>();
+    
+    // Category filter
+    var featuredProducts = productProvider.getByCategory(_selectedCategory);
+    
+    // 🔍 Search filter (live query)
+    if (_searchQuery.isNotEmpty) {
+      featuredProducts = featuredProducts
+          .where((p) => p.name.toLowerCase().contains(_searchQuery))
+          .toList();
+    }
+
+    return SafeArea(
+      bottom: false,
+      child: RefreshIndicator(
+        onRefresh: () => productProvider.syncApiToFirebase(),
+        color: CuratorDesign.primary,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AnimatedBuilder(
-                animation: scrollController,
-                builder: (context, child) {
-                  double parallaxOffset = 0;
-                  if (scrollController.hasClients) {
-                    parallaxOffset = scrollController.offset * 0.2;
-                  }
-                  return Positioned.fill(
-                    top: -parallaxOffset, 
-                    bottom: -50,
-                    child: child!,
-                  );
-                },
-                child: CachedNetworkImage(
-                  imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?q=80&w=800&auto=format&fit=crop',
-                  fit: BoxFit.cover,
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Colors.black.withOpacity(0.8),
-                      Colors.black.withOpacity(0.1),
-                    ],
+              const SizedBox(height: 12),
+              _buildSearchBar(context),
+              const SizedBox(height: 24),
+              _buildHeroBanner(context),
+              const SizedBox(height: 28),
+
+              // 📂 CATEGORIES SECTION
+              _buildSectionHeader(context, "Explore Categories"),
+              const SizedBox(height: 16),
+              _buildCategoryList(context, productProvider),
+
+              const SizedBox(height: 28),
+
+              // 🛍️ FEATURED PRODUCTS GRID
+              _buildSectionHeader(context, "Featured For You", showViewAll: true),
+              const SizedBox(height: 16),
+              
+              if (productProvider.isLoading && productProvider.products.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 60),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (featuredProducts.isEmpty)
+                _buildEmptyState(context)
+              else
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    cacheExtent: 500, // 🔥 PRELOADS ITEMS FOR SMOOTHNESS
+                    addAutomaticKeepAlives: false,
+                    addRepaintBoundaries: true,
+                    itemCount: featuredProducts.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      childAspectRatio: MediaQuery.of(context).size.width < 400 ? 0.62 : 0.72, // 🔥 ADAPTIVE RATIO
+                    ),
+                    itemBuilder: (context, index) => ProductCard(
+                      product: featuredProducts[index],
+                      index: index,
+                    ),
                   ),
                 ),
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: CuratorDesign.primaryOrange,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('WEEKEND DEAL', style: CuratorDesign.label(10, color: Colors.white)),
-                    ).animate().shimmer(delay: 1.seconds, duration: 2.seconds),
-                    const SizedBox(height: 12),
-                    Text('Organic\nHarvest Week', 
-                      style: CuratorDesign.display(24, color: Colors.white).copyWith(height: 1.1)
-                    ),
-                    const SizedBox(height: 8),
-                    Text('Save 20% on all produce', 
-                      style: CuratorDesign.body(12, color: Colors.white70)
-                    ),
-                  ],
-                ),
-              ),
+
+              const SizedBox(height: 100),
             ],
           ),
         ),
       ),
-    ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.2);
+    );
   }
-}
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String actionText;
-
-  const _SectionHeader({required this.title, required this.actionText});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title, style: CuratorDesign.display(18)),
-          Text(actionText, style: CuratorDesign.label(12, color: CuratorDesign.primaryOrange)),
+      padding: const EdgeInsets.only(top: 60),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.search_off_rounded, size: 60,
+                color: CuratorDesign.textSecondary(context)),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isNotEmpty
+                  ? "No results for \"$_searchQuery\""
+                  : "No products in this category",
+              style: CuratorDesign.subtitle(
+                  color: CuratorDesign.textSecondary(context)),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    return Container(
+      height: 54,
+      decoration: CuratorDesign.cardDecoration(
+              Theme.of(context).brightness == Brightness.dark)
+          .copyWith(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
         ],
       ),
-    );
-  }
-}
-
-class _ProductGrid extends StatelessWidget {
-  const _ProductGrid();
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          childAspectRatio: 0.58,
-        ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => ProductCard(product: allProducts[index])
-              .animate(delay: (100 * index).ms)
-              .fadeIn(duration: 800.ms)
-              .slideY(begin: 0.1, curve: Curves.easeOut),
-          childCount: allProducts.length,
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: "Search local products...",
+          hintStyle: CuratorDesign.subtitle(
+                  color: CuratorDesign.textSecondary(context))
+              .copyWith(fontSize: 14),
+          prefixIcon:
+              Icon(Icons.search_rounded, color: CuratorDesign.primary, size: 22),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear_rounded,
+                      color: CuratorDesign.textSecondary(context), size: 18),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() => _searchQuery = "");
+                  },
+                )
+              : Icon(Icons.tune_rounded,
+                  color: CuratorDesign.primary, size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
       ),
+    ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildHeroBanner(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 180,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(CuratorDesign.radiusLarge),
+        gradient: CuratorDesign.cinematicGradient,
+        boxShadow: [
+          BoxShadow(
+            color: CuratorDesign.primary.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Icon(
+              Icons.spa_rounded,
+              size: 200,
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    "New Arrivals",
+                    style: CuratorDesign.label(10, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Discover the Soul\nof Kerala",
+                  style: CuratorDesign.title(color: Colors.white).copyWith(fontSize: 22),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "Authentic & Homemade",
+                  style: CuratorDesign.subtitle(color: Colors.white.withValues(alpha: 0.8)).copyWith(fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 800.ms).scale(begin: const Offset(0.95, 0.95));
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title, {bool showViewAll = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: CuratorDesign.heading(color: CuratorDesign.textPrimary(context)),
+        ),
+        if (showViewAll)
+          TextButton(
+            onPressed: () {},
+            child: Text(
+              "View All",
+              style: CuratorDesign.label(14, color: CuratorDesign.primary),
+            ),
+          ),
+      ],
     );
+  }
+
+  Widget _buildCategoryList(BuildContext context, ProductProvider provider) {
+    final chipCategories = ["All", ...provider.categories.map((c) => c.name)];
+    
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: chipCategories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final catName = chipCategories[index];
+          final isSelected = _selectedCategory == catName;
+          return Bounceable(
+            onTap: () => setState(() => _selectedCategory = catName),
+            child: AnimatedContainer(
+              duration: 300.ms,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              decoration: BoxDecoration(
+                color: isSelected ? CuratorDesign.primary : CuratorDesign.surfaceLowColor(context),
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(
+                  color: isSelected ? CuratorDesign.primary : CuratorDesign.primary.withValues(alpha: 0.1),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                catName,
+                style: CuratorDesign.label(
+                  14, 
+                  color: isSelected ? Colors.white : CuratorDesign.primary,
+                  weight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ).animate().fadeIn(duration: 800.ms).slideX(begin: 0.1, end: 0);
   }
 }

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mallu_smart/providers/favorites_provider.dart';
 import 'package:mallu_smart/data/sample_data.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 import 'package:mallu_smart/widgets/product_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
 
 class FavoritesScreen extends StatelessWidget {
   const FavoritesScreen({super.key});
@@ -12,63 +13,126 @@ class FavoritesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final favoritesProvider = context.watch<FavoritesProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     final favoriteProducts = allProducts
         .where((p) => favoritesProvider.isFavorite(p.id))
         .toList();
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text('MY SELECTION', 
-          style: CuratorDesign.label(12, color: Theme.of(context).textTheme.bodyLarge?.color)
-              .copyWith(letterSpacing: 4)
-        ),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => Navigator.pop(context),
+      backgroundColor: CuratorDesign.surfaceColor(context),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildBoutiqueHeader(context, isDark),
+            Expanded(
+              child: favoriteProducts.isEmpty
+                  ? _buildEmptyState(isDark)
+                  : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      physics: const BouncingScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 24,
+                        childAspectRatio: 0.62,
+                      ),
+                      itemCount: favoriteProducts.length,
+                      itemBuilder: (context, index) {
+                        return ProductCard(product: favoriteProducts[index])
+                            .animate(delay: (index * 100).ms)
+                            .fadeIn(duration: 600.ms)
+                            .slideY(begin: 0.1);
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
-      body: favoriteProducts.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.favorite_border_rounded, 
-                    size: 64, 
-                    color: CuratorDesign.primaryOrange.withValues(alpha: 0.2)
-                  ).animate(onPlay: (c) => c.repeat(reverse: true))
-                   .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 2000.ms),
-                  const SizedBox(height: 24),
-                  Text('Your curation is empty', 
-                    style: CuratorDesign.display(18, color: CuratorDesign.textLight)
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Save items to find them here later.', 
-                    style: CuratorDesign.body(14, color: CuratorDesign.textLight.withValues(alpha: 0.6))
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildBoutiqueHeader(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _CircleAction(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () => Navigator.pop(context),
+            isDark: isDark,
+          ),
+          Text(
+            'My Selection',
+            style: CuratorDesign.label(16, weight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87),
+          ),
+          const SizedBox(width: 44),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F7F7),
+                shape: BoxShape.circle,
               ),
-            )
-          : GridView.builder(
-              padding: const EdgeInsets.all(24),
-              physics: const BouncingScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 20,
-                mainAxisSpacing: 20,
-                childAspectRatio: 0.58,
+              child: Icon(
+                Icons.favorite_border_rounded,
+                size: 32,
+                color: isDark ? Colors.white24 : Colors.black12,
               ),
-              itemCount: favoriteProducts.length,
-              itemBuilder: (context, index) {
-                return ProductCard(product: favoriteProducts[index])
-                    .animate(delay: (index * 100).ms)
-                    .fadeIn(duration: 800.ms)
-                    .slideY(begin: 0.1);
-              },
+            ).animate(onPlay: (c) => c.repeat(reverse: true))
+             .scale(begin: const Offset(1, 1), end: const Offset(1.1, 1.1), duration: 2000.ms),
+            const SizedBox(height: 32),
+            Text(
+              'EMPTY COLLECTION', 
+              style: CuratorDesign.label(10, weight: FontWeight.w900, color: CuratorDesign.textLight)
+                  .copyWith(letterSpacing: 2)
             ),
+            const SizedBox(height: 12),
+            Text(
+              'Curate your favorites and they will appear here.',
+              textAlign: TextAlign.center,
+              style: CuratorDesign.body(14, color: CuratorDesign.textLight).copyWith(height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn();
+  }
+}
+
+class _CircleAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _CircleAction({required this.icon, required this.onTap, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Bounceable(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF0F0F0),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: isDark ? Colors.white : Colors.black, size: 18),
+      ),
     );
   }
 }

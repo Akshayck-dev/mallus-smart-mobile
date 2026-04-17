@@ -1,4 +1,4 @@
-import 'package:mallu_smart/models/product.dart';
+import 'package:mallu_smart/data/models/product.dart';
 
 final List<Product> allProducts = [
   Product(

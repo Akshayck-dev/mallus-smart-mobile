@@ -1,31 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:mallu_smart/providers/cart_provider.dart';
 import 'package:mallu_smart/providers/favorites_provider.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 import 'package:mallu_smart/providers/connectivity_provider.dart';
 import 'package:mallu_smart/widgets/connectivity_dialog.dart';
-import 'package:mallu_smart/screens/splash_screen_v2.dart';
-
+import 'package:mallu_smart/screens/onboarding_screen.dart';
+import 'package:mallu_smart/widgets/main_navigation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mallu_smart/providers/theme_provider.dart';
-
 import 'package:mallu_smart/providers/language_provider.dart';
+import 'package:mallu_smart/providers/product_provider.dart';
+import 'package:mallu_smart/providers/order_provider.dart';
+import 'package:mallu_smart/screens/splash_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    print("🔥 Initializing Firebase...");
+    await Firebase.initializeApp();
+    print("✅ Firebase initialized successfully");
+  } catch (e) {
+    print("❌ Firebase Initialization Error: $e");
+    // We continue, but providers will need to handle this
+  }
+
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
         ChangeNotifierProvider(create: (_) => ConnectivityProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ChangeNotifierProvider(create: (_) => OrderProvider()),
       ],
       child: const MalluSmartApp(),
     ),
   );
 }
+
 
 class MalluSmartApp extends StatelessWidget {
   const MalluSmartApp({super.key});
@@ -39,11 +56,13 @@ class MalluSmartApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: CuratorDesign.getTheme(false),
       darkTheme: CuratorDesign.getTheme(true),
-      themeMode: themeProvider.themeMode,
-      home: const ConnectivityGate(child: SplashScreenV2()),
+      themeMode: ThemeMode.light,
+      home: ConnectivityGate(child: SplashScreen()),
     );
   }
 }
+
+
 
 class ConnectivityGate extends StatefulWidget {
   final Widget child;

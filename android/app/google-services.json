@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "920944361655",
+    "project_id": "mallu-smart",
+    "storage_bucket": "mallu-smart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:920944361655:android:84fd16602c9950e5c80d32",
+        "android_client_info": {
+          "package_name": "com.mallusmart.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQN7GA9UMnTUT9Gg2dRQGrWi6DfZlE4Kc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

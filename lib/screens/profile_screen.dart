@@ -1,172 +1,201 @@
 import 'package:flutter/material.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: CuratorDesign.surface,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 240,
-            pinned: true,
-            elevation: 0,
-            backgroundColor: CuratorDesign.textDark,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: CuratorDesign.premiumGradient,
-                ),
-                child: Stack(
+      backgroundColor: CuratorDesign.surfaceColor(context),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildBoutiqueHeader(context, isDark),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
                   children: [
-                    Positioned.fill(
-                      child: Opacity(
-                        opacity: 0.1,
-                        child: Icon(Icons.person_rounded, size: 300, color: Colors.white),
-                      ),
-                    ),
-                    Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 60),
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const CircleAvatar(
-                              radius: 45,
-                              backgroundColor: CuratorDesign.surfaceLow,
-                              child: Icon(Icons.person_rounded, size: 45, color: CuratorDesign.primaryOrange),
-                            ),
-                          ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                          const SizedBox(height: 16),
-                          Text(
-                            'GUEST USER',
-                            style: CuratorDesign.display(24, color: Colors.white).copyWith(letterSpacing: 2),
-                          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-                          const SizedBox(height: 4),
-                          Text(
-                            'PREMIUM MEMBER',
-                            style: CuratorDesign.label(10, color: Colors.white70).copyWith(letterSpacing: 4),
-                          ).animate().fadeIn(delay: 400.ms),
-                        ],
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    _buildEditorialProfile(context, isDark),
+                    const SizedBox(height: 48),
+                    _buildActionList(context, isDark),
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'ACCOUNT SETTINGS',
-                    style: CuratorDesign.label(10, color: CuratorDesign.textLight).copyWith(letterSpacing: 2),
-                  ).animate().fadeIn(),
-                  const SizedBox(height: 24),
-                  _buildProfileGroup([
-                    _ProfileItem(icon: Icons.shopping_bag_outlined, title: 'Order History'),
-                    _ProfileItem(icon: Icons.location_on_outlined, title: 'Saved Addresses'),
-                    _ProfileItem(icon: Icons.payment_rounded, title: 'Payment Cards'),
-                  ]),
-                  const SizedBox(height: 32),
-                  Text(
-                    'SECURITY',
-                    style: CuratorDesign.label(10, color: CuratorDesign.textLight).copyWith(letterSpacing: 2),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildProfileGroup([
-                    _ProfileItem(icon: Icons.shield_outlined, title: 'Privacy Settings'),
-                    _ProfileItem(icon: Icons.notifications_none_rounded, title: 'Notification Preferences'),
-                  ]),
-                  const SizedBox(height: 32),
-                  _ProfileItem(
-                    icon: Icons.logout_rounded, 
-                    title: 'Log Out', 
-                    color: Colors.redAccent,
-                    isLast: true,
-                  ),
-                  const SizedBox(height: 120),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProfileGroup(List<Widget> children) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 10))
-        ],
-      ),
-      child: Column(children: children),
-    );
-  }
-}
-
-class _ProfileItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Color? color;
-  final bool isLast;
-
-  const _ProfileItem({
-    required this.icon,
-    required this.title,
-    this.color,
-    this.isLast = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        decoration: BoxDecoration(
-          border: isLast ? null : Border(bottom: BorderSide(color: Colors.black.withOpacity(0.03))),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: (color ?? CuratorDesign.textDark).withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color ?? CuratorDesign.textDark, size: 20),
-            ),
-            const SizedBox(width: 16),
-            Text(
-              title,
-              style: CuratorDesign.label(13, color: color ?? CuratorDesign.textDark),
-            ),
-            const Spacer(),
-            Icon(Icons.arrow_forward_ios_rounded, size: 14, color: CuratorDesign.textLight.withOpacity(0.3)),
           ],
         ),
       ),
-    ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.05);
+    );
+  }
+
+  Widget _buildBoutiqueHeader(BuildContext context, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _CircleAction(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () => Navigator.pop(context),
+            isDark: isDark,
+          ),
+          Text(
+            'Account',
+            style: CuratorDesign.label(16, weight: FontWeight.w900, color: isDark ? Colors.white : Colors.black87),
+          ),
+          _CircleAction(
+            icon: Icons.settings_outlined,
+            onTap: () {},
+            isDark: isDark,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditorialProfile(BuildContext context, bool isDark) {
+    return Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1), width: 1),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F7F7),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_rounded, size: 48, color: isDark ? Colors.white38 : Colors.black26),
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+              ),
+            ),
+          ],
+        ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+        const SizedBox(height: 24),
+        Text(
+          'MALLU SMART USER', 
+          style: CuratorDesign.display(20, weight: FontWeight.w900, color: isDark ? Colors.white : Colors.black),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Verified Collector since 2024', 
+          style: CuratorDesign.label(10, weight: FontWeight.w800, color: CuratorDesign.textLight).copyWith(letterSpacing: 2),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionList(BuildContext context, bool isDark) {
+    return Column(
+      children: [
+        _buildItem(context, isDark, Icons.shopping_bag_outlined, 'My Orders', 'Track and manage deliveries'),
+        _buildItem(context, isDark, Icons.favorite_border_rounded, 'Favorites', 'Curated collections'),
+        _buildItem(context, isDark, Icons.location_on_outlined, 'Addresses', 'Shipping destinations'),
+        _buildItem(context, isDark, Icons.payment_rounded, 'Payment', 'Secure transaction methods'),
+        _buildItem(context, isDark, Icons.help_outline_rounded, 'Support', 'Boutique assistance'),
+        const SizedBox(height: 12),
+        _buildItem(context, isDark, Icons.logout_rounded, 'Sign Out', 'Safely leave your account', isDestructive: true),
+      ],
+    );
+  }
+
+  Widget _buildItem(BuildContext context, bool isDark, IconData icon, String title, String subtitle, {bool isDestructive = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Bounceable(
+        onTap: () {},
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : const Color(0xFFF7F7F7),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDestructive 
+                      ? Colors.red.withValues(alpha: 0.1) 
+                      : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: isDestructive ? Colors.redAccent : (isDark ? Colors.white : Colors.black), size: 18),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: CuratorDesign.label(13, weight: FontWeight.w800, color: isDestructive ? Colors.redAccent : (isDark ? Colors.white : Colors.black)),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: CuratorDesign.body(11, color: CuratorDesign.textLight),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: isDark ? Colors.white24 : Colors.black12),
+            ],
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideX(begin: 0.1);
+  }
+}
+
+class _CircleAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _CircleAction({required this.icon, required this.onTap, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Bounceable(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF0F0F0),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: isDark ? Colors.white : Colors.black, size: 18),
+      ),
+    );
   }
 }

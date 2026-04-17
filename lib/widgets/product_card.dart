@@ -1,171 +1,248 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mallu_smart/models/product.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/data/models/product.dart';
 import 'package:mallu_smart/screens/product_details_screen.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:provider/provider.dart';
 import 'package:mallu_smart/providers/favorites_provider.dart';
 import 'package:mallu_smart/providers/cart_provider.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
+import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:mallu_smart/widgets/confetti_celebration.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
-import 'package:mallu_smart/widgets/shimmer_loader.dart';
-
-class ProductCard extends StatelessWidget {
+class ProductCard extends StatefulWidget {
   final Product product;
-  const ProductCard({super.key, required this.product});
+  final double? width;
+  final int index;
+
+  const ProductCard({
+    super.key,
+    required this.product,
+    this.width,
+    this.index = 0,
+  });
+
+  @override
+  State<ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends State<ProductCard> {
+  bool _isAdded = false;
+
+  void _handleAddToCart(BuildContext context) {
+    if (_isAdded) return;
+
+    HapticFeedback.mediumImpact();
+    context.read<CartProvider>().addItem(widget.product.toJson());
+
+    setState(() => _isAdded = true);
+
+    // Show SnackBar
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            const Text('Product added to cart'),
+          ],
+        ),
+        duration: const Duration(seconds: 1),
+        backgroundColor: CuratorDesign.primary,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+
+    // Reset icon after delay
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        setState(() => _isAdded = false);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<FavoritesProvider>(
-      builder: (context, favorites, child) {
-        final isFav = favorites.isFavorite(product.id);
+      builder: (context, favorites, _) {
+        final isFav = favorites.isFavorite(widget.product.id);
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        
-        return GestureDetector(
+
+        return Bounceable(
           onTap: () => Navigator.push(
             context,
             PageRouteBuilder(
-              transitionDuration: const Duration(milliseconds: 600),
-              pageBuilder: (context, animation, secondaryAnimation) => 
-                  ProductDetailsScreen(product: product),
+              pageBuilder: (context, animation, secondaryAnimation) =>
+                  ProductDetailsScreen(product: widget.product.toJson()),
               transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.9, end: 1.0).animate(
-                      CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
-                    ),
-                    child: child,
-                  ),
-                );
+                return FadeTransition(opacity: animation, child: child);
               },
             ),
           ),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            width: widget.width,
+            clipBehavior: Clip.antiAlias,
             decoration: CuratorDesign.cardDecoration(isDark),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(CuratorDesign.radiusLarge),
+                onTap: () => Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        ProductDetailsScreen(product: widget.product.toJson()),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Hero(
-                      tag: 'prod-${product.id}',
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(22),
-                        child: AspectRatio(
-                          aspectRatio: 1,
-                          child: CachedNetworkImage(
-                            imageUrl: product.imageUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => const ShimmerLoader(
-                              width: double.infinity, 
-                              height: double.infinity,
-                              borderRadius: 0,
-                            ),
-                            errorWidget: (context, url, error) => Container(
-                              color: const Color(0xFFF3F4F6),
-                              child: const Icon(Icons.error_outline),
+                    SizedBox(
+                      height: 125,
+                      child: Stack(
+                        children: [
+                          Hero(
+                            tag: 'prod-image-${widget.product.id}',
+                            child: ClipRRect(
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(CuratorDesign.radiusLarge),
+                              ),
+                              child: CachedNetworkImage(
+                                imageUrl: widget.product.imageUrl,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.cover,
+                                fadeInDuration: const Duration(milliseconds: 200),
+                                placeholder: (context, url) => Container(
+                                  color: CuratorDesign.surfaceLowColor(context),
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color:
+                                          CuratorDesign.primary.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: CuratorDesign.surfaceLowColor(context),
+                                  child: Icon(Icons.image_not_supported_outlined,
+                                      color: CuratorDesign.textSecondary(context)),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: GestureDetector(
-                        onTap: () => favorites.toggleFavorite(product.id),
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
-                            ],
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Bounceable(
+                              onTap: () {
+                                HapticFeedback.lightImpact();
+                                favorites.toggleFavorite(widget.product.id);
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: isFav
+                                      ? Colors.red.withValues(alpha: 0.8)
+                                      : Colors.white.withValues(alpha: 0.2),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.3),
+                                      width: 1),
+                                ),
+                                child: Icon(
+                                  isFav
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded, 
-                            size: 16, 
-                            color: isFav ? Colors.redAccent : CuratorDesign.textDark
-                          ).animate(target: isFav ? 1 : 0)
-                           .scale(begin: const Offset(1, 1), end: const Offset(1.3, 1.3), duration: 200.ms, curve: Curves.easeOutBack)
-                           .then()
-                           .scale(begin: const Offset(1.3, 1.3), end: const Offset(1, 1)),
-                        ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  product.name,
-                  style: CuratorDesign.display(14, color: Theme.of(context).textTheme.bodyLarge?.color),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.category.toUpperCase(),
-                  style: CuratorDesign.label(8, color: CuratorDesign.textLight).copyWith(letterSpacing: 1),
-                ),
-                const Spacer(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '₹${product.price.toInt()}',
-                          style: CuratorDesign.display(16, color: CuratorDesign.primaryOrange),
-                        ),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        HapticFeedback.heavyImpact();
-                        context.read<CartProvider>().addToCart(product);
-                        showConfetti(context);
-                        
-                        ScaffoldMessenger.of(context).clearSnackBars();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: CuratorDesign.textDark,
-                            behavior: SnackBarBehavior.floating,
-                            margin: const EdgeInsets.only(bottom: 100, left: 24, right: 24),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            content: Row(
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SizedBox(
+                        height: 105,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.product.name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: CuratorDesign.heading(
+                                      color: CuratorDesign.textPrimary(context))
+                                  .copyWith(fontSize: 14, height: 1.2),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Kerala Authentic",
+                              style: CuratorDesign.subtitle(
+                                      color: CuratorDesign.textSecondary(context))
+                                  .copyWith(fontSize: 12),
+                            ),
+                            const Spacer(),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 18),
-                                const SizedBox(width: 12),
                                 Text(
-                                  'Added to your selection',
-                                  style: CuratorDesign.label(12, color: Colors.white),
+                                  '₹${widget.product.price.toStringAsFixed(0)}',
+                                  style: CuratorDesign.price(
+                                      color: CuratorDesign.primary),
+                                ),
+                                Bounceable(
+                                  onTap: () => _handleAddToCart(context),
+                                  scaleDown: 0.85, // 🔥 TACTILE SQUISH
+                                  child: AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: _isAdded ? 14 : 10,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: _isAdded
+                                          ? const LinearGradient(colors: [
+                                              Colors.orange,
+                                              Colors.deepOrange
+                                            ])
+                                          : CuratorDesign.primaryGradient,
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        if (!_isAdded)
+                                          BoxShadow(
+                                            color: CuratorDesign.primary
+                                                .withValues(alpha: 0.2),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                      ],
+                                    ),
+                                    child: AnimatedScale(
+                                      scale: _isAdded ? 1.2 : 1.0, // 🔥 ICON POP
+                                      duration: const Duration(milliseconds: 200),
+                                      child: Icon(
+                                        _isAdded
+                                            ? Icons.done_rounded
+                                            : Icons.add_rounded,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ],
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: CuratorDesign.textDark,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 14),
-                            const SizedBox(width: 4),
-                            Text(
-                              'ADD',
-                              style: CuratorDesign.label(10, color: Colors.white).copyWith(fontWeight: FontWeight.w700),
                             ),
                           ],
                         ),
@@ -173,13 +250,15 @@ class ProductCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ).animate()
-           .scale(begin: const Offset(0.9, 0.9), delay: 100.ms, duration: 600.ms, curve: Curves.easeOutQuart)
-           .fadeIn(duration: 600.ms),
-        );
-      }
+          ),
+        ).animate().fadeIn(delay: (widget.index * 50).ms, duration: 500.ms).slideY(
+              begin: 0.1,
+              end: 0,
+              curve: Curves.easeOutQuart,
+            );
+      },
     );
   }
 }

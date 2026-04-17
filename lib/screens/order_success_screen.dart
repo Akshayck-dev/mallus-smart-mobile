@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:lottie/lottie.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/design_system.dart';
-import '../widgets/deep_heat_button.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
 
 class OrderSuccessScreen extends StatelessWidget {
   const OrderSuccessScreen({super.key});
@@ -10,121 +10,143 @@ class OrderSuccessScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Cinematic backdrop
+      backgroundColor: CuratorDesign.surfaceColor(context),
       body: Stack(
         children: [
-          // 1. Layered Background Build
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF151515), Colors.black],
-                ),
-              ),
-            ),
-          ),
-          
-          // Cinematic Lens Blur
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-              child: Container(color: Colors.black.withOpacity(0.1)),
-            ),
-          ).animate().fadeIn(duration: 800.ms),
-
-          // 2. The Trophy Build
-          Align(
-            alignment: Alignment.center,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Success Lottie with glow
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        color: CuratorDesign.primaryOrange.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: CuratorDesign.primaryOrange.withOpacity(0.4),
-                            blurRadius: 60,
-                            spreadRadius: 20,
-                          )
-                        ],
-                      ),
-                    ).animate().scale(begin: const Offset(0, 0), curve: Curves.easeOutBack, duration: 800.ms),
-                    
-                    Lottie.network(
-                      'https://assets10.lottiefiles.com/packages/lf20_kz9pjcsh.json',
-                      width: 240,
-                      height: 240,
-                      repeat: false,
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 20),
-                
-                Text(
-                  'ORDER IN PREPARATION',
-                  style: CuratorDesign.label(12, color: CuratorDesign.primaryOrange).copyWith(letterSpacing: 4),
-                ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-                
-                const SizedBox(height: 12),
-                
-                Text(
-                  'SUCCESS!',
-                  style: CuratorDesign.display(48, color: Colors.white).copyWith(letterSpacing: 2),
-                ).animate().fadeIn(delay: 600.ms).scale(begin: const Offset(0.9, 0.9)),
-              ],
-            ),
-          ),
-
-          // 3. Floating Glassmorphic Order Card
+          // Background Glow
           Positioned(
-            bottom: 40,
-            left: 24,
-            right: 24,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(32),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(
-                  padding: const EdgeInsets.all(32),
+            top: MediaQuery.of(context).size.height * 0.2,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CuratorDesign.primary.withValues(alpha: 0.08),
+                ),
+              ).animate(onPlay: (c) => c.repeat(reverse: true))
+                .scale(begin: const Offset(1, 1), end: const Offset(1.2, 1.2), duration: 2.seconds),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Success Icon with Ring
+                Container(
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(32),
-                    border: Border.all(color: Colors.white.withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'REDIRECTED TO WHATSAPP',
-                        style: CuratorDesign.label(10, color: Colors.white70).copyWith(letterSpacing: 2),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Our curators are now processing your request. You\'ll receive a confirmation chat shortly.',
-                        textAlign: TextAlign.center,
-                        style: CuratorDesign.body(14, color: Colors.white54).copyWith(height: 1.5),
-                      ),
-                      const SizedBox(height: 32),
-                      DeepHeatButton(
-                        text: 'RETURN TO GALLERY',
-                        onTap: () => Navigator.popUntil(context, (route) => route.isFirst),
+                    color: CuratorDesign.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: CuratorDesign.primary.withValues(alpha: 0.4),
+                        blurRadius: 30,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.check_rounded,
+                      size: 64,
+                      color: Colors.white,
+                    ),
+                  ),
+                ).animate().scale(
+                  duration: 800.ms,
+                  curve: Curves.elasticOut,
                 ),
+
+                const SizedBox(height: 48),
+
+                Text(
+                  "Order Placed\nSuccessfully!",
+                  textAlign: TextAlign.center,
+                  style: CuratorDesign.title(color: CuratorDesign.textPrimary(context)).copyWith(fontSize: 32),
+                ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  "Your selection is being prepared for shipment. You will receive tracking details via WhatsApp soon.",
+                  textAlign: TextAlign.center,
+                  style: CuratorDesign.subtitle(color: CuratorDesign.textSecondary(context)).copyWith(height: 1.6),
+                ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 60),
+
+                // Primary Button
+                Bounceable(
+                  onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                  child: Container(
+                    width: double.infinity,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      gradient: CuratorDesign.primaryGradient,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: CuratorDesign.primary.withValues(alpha: 0.3),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        "CONTINUE SHOPPING",
+                        style: CuratorDesign.label(16, color: Colors.white, weight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 800.ms).slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 16),
+
+                // Secondary Button
+                Bounceable(
+                  onTap: () {},
+                  child: Container(
+                    width: double.infinity,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: CuratorDesign.primary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: CuratorDesign.primary.withValues(alpha: 0.1)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.share_rounded, size: 18, color: CuratorDesign.primary),
+                        const SizedBox(width: 12),
+                        Text(
+                          "SHARE PURCHASE",
+                          style: CuratorDesign.label(14, color: CuratorDesign.primary, weight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.2, end: 0),
+              ],
+            ),
+          ),
+          
+          Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Text(
+                "MALLU SMART KERALA",
+                style: CuratorDesign.label(10, color: CuratorDesign.textSecondary(context).withValues(alpha: 0.3)),
               ),
-            ).animate().fadeIn(delay: 1000.ms).slideY(begin: 0.1),
+            ),
           ),
         ],
       ),

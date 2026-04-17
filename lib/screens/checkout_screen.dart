@@ -1,364 +1,433 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/design_system.dart';
-import '../providers/cart_provider.dart';
-import '../widgets/deep_heat_button.dart';
-import 'order_success_screen.dart';
-import '../widgets/confetti_celebration.dart';
+import 'package:mallu_smart/data/models/cart_item.dart';
+import 'package:mallu_smart/providers/cart_provider.dart';
+import 'package:mallu_smart/providers/order_provider.dart';
+import 'package:mallu_smart/data/services/order_service.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
+import 'package:mallu_smart/widgets/interactive/bounceable.dart';
+import 'package:mallu_smart/screens/order_success_screen.dart';
+import 'package:provider/provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({super.key});
+  final List<CartItem> cartItems;
+
+  const CheckoutScreen({super.key, required this.cartItems});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
-  final PageController _pageController = PageController();
-  int _currentStep = 0;
-
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
-  String _selectedPayment = 'CASH ON DELIVERY';
+  final _addressController = TextEditingController();
+  final _emailController = TextEditingController();
+  bool _isPlaceOrderPressed = false;
 
-  void _nextStep() {
-    if (_currentStep == 0) {
-      if (_formKey.currentState!.validate()) {
-        _pageController.nextPage(duration: 500.ms, curve: Curves.easeOutQuart);
-        setState(() => _currentStep++);
-      }
-    } else if (_currentStep < 2) {
-      _pageController.nextPage(duration: 500.ms, curve: Curves.easeOutQuart);
-      setState(() => _currentStep++);
+  double get _total => widget.cartItems.fold(
+        0.0,
+        (sum, item) =>
+            sum + (item.product['price'] as num).toDouble() * item.quantity,
+      );
+
+  // ── Place Order ───────────────────────────────────────────────────
+  Future<void> _handlePlaceOrder() async {
+    if (_nameController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _addressController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill all required fields'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
     }
-  }
 
-  void _prevStep() {
-    if (_currentStep > 0) {
-      _pageController.previousPage(duration: 500.ms, curve: Curves.easeOutQuart);
-      setState(() => _currentStep--);
-    } else {
-      Navigator.pop(context);
-    }
-  }
-
-  void _completeOrder() async {
-    HapticFeedback.heavyImpact();
-    final cart = context.read<CartProvider>();
+    final orderProvider = context.read<OrderProvider>();
     
-    String orderSummary = "🛒 *NEW ORDER FROM MALLU'S MART*\n";
-    orderSummary += "━━━━━━━━━━━━━━━━━━━━\n\n";
-    for (var item in cart.items) {
-      orderSummary += "📦 *${item.product.name}*\n";
-      orderSummary += "   Qty: ${item.quantity} | Price: ₹${(item.product.price * item.quantity).toInt()}\n\n";
-    }
-    orderSummary += "💰 *TOTAL: ₹${cart.total.toInt()}*\n";
-    orderSummary += "💳 *PAYMENT: $_selectedPayment*\n\n";
-    orderSummary += "👤 *CUSTOMER*\n";
-    orderSummary += "Name: ${_nameController.text}\n";
-    orderSummary += "Phone: ${_phoneController.text}\n";
-    orderSummary += "Address: ${_addressController.text}\n";
+    final success = await orderProvider.placeOrder(
+      name: _nameController.text,
+      address: _addressController.text,
+      mobile: _phoneController.text,
+      email: _emailController.text,
+      cartItems: widget.cartItems,
+    );
 
-    const String businessNumber = "911234567890"; // WhatsApp Support number
-    final whatsappUrl = "https://wa.me/$businessNumber?text=${Uri.encodeComponent(orderSummary)}";
+    if (!mounted) return;
 
-    final uri = Uri.parse(whatsappUrl);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      cart.clear();
-      if (mounted) {
-        showConfetti(context);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OrderSuccessScreen()),
-        );
-      }
+    if (success) {
+      context.read<CartProvider>().clearCart();
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const OrderSuccessScreen(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Failed to sync order. Please try again.'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final grouped = OrderService.groupBySeller(widget.cartItems);
+    final orderProvider = context.watch<OrderProvider>();
+
     return Scaffold(
-      backgroundColor: CuratorDesign.surface,
-      appBar: AppBar(
-        backgroundColor: CuratorDesign.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: CuratorDesign.textDark, size: 20),
-          onPressed: _prevStep,
-        ),
-        title: _buildStepIndicator(),
-        centerTitle: true,
-      ),
+      backgroundColor: CuratorDesign.surfaceColor(context),
+      appBar: _buildAppBar(context),
       body: Stack(
         children: [
-          PageView(
-            controller: _pageController,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _buildAddressStep(),
-              _buildPaymentStep(),
-              _buildReviewStep(),
-            ],
-          ),
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: _buildGlassBottomBar(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepIndicator() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: List.generate(3, (index) {
-        bool isActive = index <= _currentStep;
-        bool isCurrent = index == _currentStep;
-        return AnimatedContainer(
-          duration: 400.ms,
-          curve: Curves.easeOutQuart,
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: isCurrent ? 30 : 8,
-          height: 6,
-          decoration: BoxDecoration(
-            color: isActive ? CuratorDesign.primaryOrange : CuratorDesign.textLight.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(3),
-            boxShadow: isCurrent ? [
-              BoxShadow(color: CuratorDesign.primaryOrange.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 2))
-            ] : [],
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildAddressStep() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 150),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('DELIVERY\nADDRESS', style: CuratorDesign.display(32, color: CuratorDesign.textDark).copyWith(height: 1.1)),
-            const SizedBox(height: 32),
-            _buildField('Full Name', _nameController, Icons.person_rounded),
-            const SizedBox(height: 16),
-            _buildField('Phone Number', _phoneController, Icons.phone_android_rounded, keyboard: TextInputType.phone),
-            const SizedBox(height: 16),
-            _buildField('Street Address', _addressController, Icons.location_on_rounded, maxLines: 3),
-          ],
-        ),
-      ),
-    ).animate().fadeIn().slideX(begin: 0.1);
-  }
-
-  Widget _buildPaymentStep() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 150),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('PAYMENT\nMETHOD', style: CuratorDesign.display(32, color: CuratorDesign.textDark).copyWith(height: 1.1)),
-          const SizedBox(height: 32),
-          _buildPaymentCard('CASH ON DELIVERY', 'Pay when your items arrive', Icons.payments_rounded),
-          const SizedBox(height: 12),
-          _buildPaymentCard('WHATSAPP PAY', 'Confirm payment via order chat', Icons.chat_bubble_rounded),
-        ],
-      ),
-    ).animate().fadeIn().slideX(begin: 0.1);
-  }
-
-  Widget _buildReviewStep() {
-    final cart = context.watch<CartProvider>();
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 200),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('CONFIRM\nDETAILS', style: CuratorDesign.display(32, color: CuratorDesign.textDark).copyWith(height: 1.1)),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 20, offset: const Offset(0, 10))
-              ],
-            ),
+          // ── Main Content ─────────────────────────────────────────
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 120),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ...cart.items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Row(
-                    children: [
-                      Text('${item.quantity}x', style: CuratorDesign.label(12, color: CuratorDesign.primaryOrange)),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(item.product.name, style: CuratorDesign.body(14))),
-                      Text('₹${(item.product.price * item.quantity).toInt()}', style: CuratorDesign.label(14)),
-                    ],
-                  ),
-                )),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Divider(color: Colors.black12),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('GRAND TOTAL', style: CuratorDesign.label(12)),
-                    Text('₹${cart.total.toInt()}', style: CuratorDesign.display(24, color: CuratorDesign.textDark)),
-                  ],
-                ),
+                _buildSectionTitle(context, 'Shipping Details'),
+                const SizedBox(height: 16),
+                _buildForm(context),
+                const SizedBox(height: 32),
+                _buildSectionTitle(context, 'Order Summary'),
+                const SizedBox(height: 16),
+                _buildOrderSummary(context, grouped),
               ],
             ),
           ),
-          const SizedBox(height: 32),
-          _buildInfoRow('DELIVERY TO', _nameController.text),
-          _buildInfoRow('ADDRESS', _addressController.text),
-          _buildInfoRow('PAYMENT VIA', _selectedPayment),
+
+          // ── Full-Screen Loading Overlay ──────────────────────────
+          if (orderProvider.isLoading)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 36),
+                      decoration: BoxDecoration(
+                        color: CuratorDesign.surfaceColor(context),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 40,
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                              color: CuratorDesign.primary, strokeWidth: 3),
+                          const SizedBox(height: 24),
+                          Text('Processing Order...',
+                              style: CuratorDesign.label(16,
+                                  color: CuratorDesign.textPrimary(context))),
+                          const SizedBox(height: 8),
+                          Text('Securing your items',
+                              style: CuratorDesign.subtitle(
+                                      color: CuratorDesign.textSecondary(context))
+                                  .copyWith(fontSize: 12)),
+                        ],
+                      ),
+                    )
+                        .animate()
+                        .scale(duration: 300.ms, curve: Curves.easeOutBack),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
-    ).animate().fadeIn().slideX(begin: 0.1);
+      bottomNavigationBar: _buildBottomActions(context, orderProvider),
+    );
   }
 
-  Widget _buildField(String label, TextEditingController controller, IconData icon, {int maxLines = 1, TextInputType? keyboard}) {
+  // ── App Bar ───────────────────────────────────────────────────────
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: true,
+      leading: Bounceable(
+        onTap: () => Navigator.pop(context),
+        child: Icon(Icons.arrow_back_ios_new_rounded,
+            color: CuratorDesign.textPrimary(context), size: 18),
+      ),
+      title: Text(
+        'Checkout',
+        style: CuratorDesign.heading(color: CuratorDesign.textPrimary(context))
+            .copyWith(fontSize: 20),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Text(
+      title,
+      style: CuratorDesign.heading(color: CuratorDesign.textPrimary(context))
+          .copyWith(fontSize: 18),
+    ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1, end: 0);
+  }
+
+  // ── Form ──────────────────────────────────────────────────────────
+  Widget _buildForm(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))
-        ],
-      ),
+      decoration: CuratorDesign.cardDecoration(
+          Theme.of(context).brightness == Brightness.dark),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label.toUpperCase(), style: CuratorDesign.label(8, color: CuratorDesign.textLight).copyWith(letterSpacing: 2)),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: controller,
-            maxLines: maxLines,
-            keyboardType: keyboard,
-            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-            style: CuratorDesign.body(16),
-            decoration: InputDecoration(
-              icon: Icon(icon, color: CuratorDesign.primaryOrange, size: 20),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.zero,
-              hintText: 'Enter $label',
-              hintStyle: CuratorDesign.body(14, color: Colors.black26),
-            ),
-          ),
+          _buildField('Your Name', _nameController, Icons.person_outline_rounded),
+          const SizedBox(height: 16),
+          _buildField('Mobile Number', _phoneController,
+              Icons.phone_android_rounded,
+              keyboard: TextInputType.phone),
+          const SizedBox(height: 16),
+          _buildField('Email (optional)', _emailController,
+              Icons.alternate_email_rounded,
+              keyboard: TextInputType.emailAddress),
+          const SizedBox(height: 16),
+          _buildField('Delivery Address', _addressController,
+              Icons.location_on_outlined,
+              maxLines: 3),
         ],
       ),
-    );
+    ).animate().fadeIn(delay: 200.ms, duration: 600.ms);
   }
 
-  Widget _buildPaymentCard(String title, String subtitle, IconData icon) {
-    bool isSelected = _selectedPayment == title;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        setState(() => _selectedPayment = title);
-      },
-      child: AnimatedContainer(
-        duration: 300.ms,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isSelected ? CuratorDesign.primaryOrange.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? CuratorDesign.primaryOrange : Colors.transparent, width: 2),
+  Widget _buildField(
+      String hint, TextEditingController controller, IconData icon,
+      {TextInputType? keyboard, int maxLines = 1}) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboard,
+      maxLines: maxLines,
+      style: CuratorDesign.body(14, color: CuratorDesign.textPrimary(context)),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: CuratorDesign.subtitle(
+                color: CuratorDesign.textSecondary(context))
+            .copyWith(fontSize: 14),
+        prefixIcon: Icon(icon, color: CuratorDesign.primary, size: 20),
+        filled: true,
+        fillColor: CuratorDesign.surfaceLowColor(context),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isSelected ? CuratorDesign.primaryOrange.withOpacity(0.2) : CuratorDesign.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: isSelected ? CuratorDesign.primaryOrange : Colors.black26),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: CuratorDesign.label(14, color: isSelected ? CuratorDesign.primaryOrange : CuratorDesign.textDark)),
-                  Text(subtitle, style: CuratorDesign.body(12, color: Colors.black38)),
-                ],
-              ),
-            ),
-            if (isSelected) const Icon(Icons.check_circle_rounded, color: CuratorDesign.primaryOrange),
-          ],
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: CuratorDesign.primary.withValues(alpha: 0.1), width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: CuratorDesign.primary, width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: CuratorDesign.label(10, color: CuratorDesign.primaryOrange).copyWith(letterSpacing: 2)),
-          const SizedBox(height: 4),
-          Text(value, style: CuratorDesign.body(16, color: CuratorDesign.textDark)),
-        ],
-      ),
-    );
-  }
+  // ── Order Summary (grouped by seller) ────────────────────────────
+  Widget _buildOrderSummary(
+      BuildContext context, Map<String, List<CartItem>> grouped) {
+    return Column(
+      children: [
+        ...grouped.entries.toList().asMap().entries.map((mapEntry) {
+          final delay = mapEntry.key;
+          final entry = mapEntry.value;
+          final sellerItems = entry.value;
+          final seller = sellerItems.first.product['seller'];
+          final sellerName = (seller is Map ? seller['name'] : 'Seller')
+              as String? ??
+              'Seller';
+          final sellerPhone = (seller is Map ? seller['phone'] : '') as String;
+          final sellerTotal = sellerItems.fold<double>(
+              0,
+              (s, i) =>
+                  s + (i.product['price'] as num).toDouble() * i.quantity);
 
-  Widget _buildGlassBottomBar() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-        child: Container(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).padding.bottom + 24),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.8),
-            border: const Border(top: BorderSide(color: Colors.black12, width: 0.5)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_currentStep == 2) ...[
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(20),
+            decoration: CuratorDesign.cardDecoration(
+                Theme.of(context).brightness == Brightness.dark),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('TOTAL PAYMENT', style: CuratorDesign.label(12)),
-                    Text('₹${context.read<CartProvider>().total.toInt()}', style: CuratorDesign.display(24)),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: CuratorDesign.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.storefront_rounded,
+                          color: CuratorDesign.primary, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(sellerName,
+                              style: CuratorDesign.heading(
+                                      color: CuratorDesign.textPrimary(context))
+                                  .copyWith(fontSize: 14)),
+                          Text('+$sellerPhone',
+                              style: CuratorDesign.label(11,
+                                  color: CuratorDesign.textSecondary(context))),
+                        ],
+                      ),
+                    ),
+                    /* WhatsApp Badge Removed for Standard E-Com View */
                   ],
                 ),
                 const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                ...sellerItems.map((item) {
+                  final name = item.product['name'] ?? 'Product';
+                  final price = (item.product['price'] as num).toDouble();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(name,
+                              style: CuratorDesign.body(14,
+                                  color: CuratorDesign.textPrimary(context),
+                                  weight: FontWeight.w500)),
+                        ),
+                        Text('×${item.quantity}',
+                            style: CuratorDesign.label(12,
+                                color: CuratorDesign.textSecondary(context))),
+                        const SizedBox(width: 16),
+                        Text('₹${(price * item.quantity).toStringAsFixed(0)}',
+                            style: CuratorDesign.label(14,
+                                color: CuratorDesign.textPrimary(context),
+                                weight: FontWeight.w700)),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text('Seller total: ',
+                        style: CuratorDesign.label(13,
+                            color: CuratorDesign.textSecondary(context))),
+                    Text('₹${sellerTotal.toStringAsFixed(0)}',
+                        style: CuratorDesign.price(color: CuratorDesign.primary)
+                            .copyWith(fontSize: 16)),
+                  ],
+                ),
               ],
-              DeepHeatButton(
-                text: _currentStep == 2 ? 'CONFIRM ORDER' : 'CONTINUE',
-                onTap: () {
-                  HapticFeedback.mediumImpact();
-                  if (_currentStep == 2) {
-                    _completeOrder();
-                  } else {
-                    _nextStep();
-                  }
-                },
+            ),
+          ).animate().fadeIn(delay: (400 + delay * 150).ms, duration: 500.ms);
+        }),
+        // 🔥 TOTAL SUMMARY REMOVED FROM HERE TO BECOME STICKY
+      ],
+    );
+  }
+
+  // ── Bottom CTA ─────────────────────────────────────────────────────
+  Widget _buildBottomActions(BuildContext context, OrderProvider provider) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Sticky Total Amount ──
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF25D366).withValues(alpha: 0.2)),
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Total Amount',
+                      style: CuratorDesign.heading(color: CuratorDesign.textPrimary(context))
+                          .copyWith(fontSize: 15)),
+                  Text('₹${_total.toStringAsFixed(0)}',
+                      style: CuratorDesign.price(color: CuratorDesign.primary)
+                          .copyWith(fontSize: 22)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // ── Place Order Button ──
+            GestureDetector(
+              onTapDown: (_) => setState(() => _isPlaceOrderPressed = true),
+              onTapUp: (_) => setState(() => _isPlaceOrderPressed = false),
+              onTapCancel: () => setState(() => _isPlaceOrderPressed = false),
+              onTap: provider.isLoading ? null : _handlePlaceOrder,
+              child: AnimatedScale(
+                scale: _isPlaceOrderPressed ? 0.96 : 1.0,
+                duration: const Duration(milliseconds: 120),
+                child: Container(
+                  height: 58,
+                  decoration: BoxDecoration(
+                    gradient: CuratorDesign.primaryGradient,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: CuratorDesign.primary.withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: provider.isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.send_rounded,
+                                  color: Colors.white, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Submit Order',
+                                style: CuratorDesign.label(15,
+                                    color: Colors.white, weight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-    ).animate().slideY(begin: 1.0, duration: 600.ms, curve: Curves.easeOutQuart);
+    );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:app_settings/app_settings.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 
 class ConnectivityDialog extends StatelessWidget {
   const ConnectivityDialog({super.key});

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../utils/design_system.dart';
+import '../core/utils/design_system.dart';
 
 class ProductSkeleton extends StatelessWidget {
   const ProductSkeleton({super.key});
@@ -8,7 +8,7 @@ class ProductSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color baseColor = isDark ? Colors.white10 : Colors.black.withOpacity(0.05);
+    final Color baseColor = isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05);
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -18,13 +18,13 @@ class ProductSkeleton extends StatelessWidget {
         children: [
           // Image Skeleton
           ClipRRect(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(CuratorDesign.radius),
             child: AspectRatio(
               aspectRatio: 1,
               child: Container(color: baseColor),
             ),
           ).animate(onPlay: (c) => c.repeat())
-           .shimmer(duration: 1200.ms, color: isDark ? Colors.white.withOpacity(0.05) : Colors.white.withOpacity(0.7)),
+           .shimmer(duration: 1200.ms, color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white.withValues(alpha: 0.7)),
           
           const SizedBox(height: 14),
           
@@ -71,7 +71,7 @@ class ProductSkeleton extends StatelessWidget {
                 width: 60,
                 decoration: BoxDecoration(
                   color: baseColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(CuratorDesign.radius),
                 ),
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:flutter/services.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class CategorySelector extends StatefulWidget {
@@ -22,7 +23,7 @@ class _CategorySelectorState extends State<CategorySelector> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 50,
+      height: 42,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         scrollDirection: Axis.horizontal,
@@ -40,19 +41,21 @@ class _CategorySelectorState extends State<CategorySelector> {
             child: AnimatedContainer(
               duration: 400.ms,
               curve: Curves.easeOutQuart,
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 0),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 0),
               decoration: BoxDecoration(
-                color: isSelected ? CuratorDesign.textDark : Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: isSelected ? CuratorDesign.primaryIndigo : (Theme.of(context).brightness == Brightness.dark ? CuratorDesign.darkSurfaceLow : Colors.white),
+                borderRadius: BorderRadius.circular(CuratorDesign.radius / 2),
+                border: Border.all(color: isSelected ? Colors.transparent : CuratorDesign.textPrimary(context).withValues(alpha: 0.05)),
+
                 boxShadow: isSelected ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   )
                 ] : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   )
@@ -63,7 +66,7 @@ class _CategorySelectorState extends State<CategorySelector> {
                   widget.categories[index].toUpperCase(),
                   style: CuratorDesign.label(
                     11, 
-                    color: isSelected ? Colors.white : CuratorDesign.textLight
+                    color: isSelected ? Colors.white : CuratorDesign.textSecondary(context)
                   ).copyWith(letterSpacing: 2, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
                 ),
               ),

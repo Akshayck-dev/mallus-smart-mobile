@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:mallu_smart/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/design_system.dart';
 
 class PremiumCuratorLoader extends StatelessWidget {
   final double size;
@@ -16,7 +16,6 @@ class PremiumCuratorLoader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final activeColor = color ?? CuratorDesign.primaryOrange;
-
     return SizedBox(
       width: size,
       height: size,
@@ -24,37 +23,42 @@ class PremiumCuratorLoader extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           // The Rotating Gradient Ring
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: 2 * math.pi),
-            duration: const Duration(seconds: 2),
-            curve: Curves.linear,
-            onEnd: () {}, // Handled by repetition below, but this is the backup
-            builder: (context, value, child) {
-              return Transform.rotate(
-                angle: value,
-                child: CustomPaint(
-                  size: Size(size, size),
-                  painter: _GradientRingPainter(color: activeColor),
-                ),
-              );
-            },
+          SizedBox(
+            width: size,
+            height: size,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.0, end: 2 * math.pi),
+              duration: const Duration(seconds: 2),
+              curve: Curves.linear,
+              builder: (context, value, child) {
+                return Transform.rotate(
+                  angle: value,
+                  child: CustomPaint(
+                    size: Size(size, size),
+                    painter: _GradientRingPainter(color: activeColor),
+                  ),
+                );
+              },
+            ),
           ).animate(onPlay: (controller) => controller.repeat())
            .rotate(duration: 1500.ms),
 
           // Central Pulsating Glow
-          Container(
+          SizedBox(
             width: size * 0.25,
             height: size * 0.25,
-            decoration: BoxDecoration(
-              color: activeColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: activeColor.withValues(alpha: 0.4),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                ),
-              ],
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: activeColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.4),
+                    blurRadius: 15,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
             ),
           ).animate(onPlay: (controller) => controller.repeat(reverse: true))
            .scale(
