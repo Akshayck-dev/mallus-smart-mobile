@@ -1,21 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../data/models/product.dart';
 import '../data/models/category.dart';
 import '../data/repositories/product_repository.dart';
-import '../data/sample_data.dart';
+import '../core/network/auth_service.dart';
 
 class ProductProvider with ChangeNotifier {
   final _repo = ProductRepository();
-  final _firestore = FirebaseFirestore.instance;
   
   List<Product> _products = [];
   List<Category> _categories = [];
   bool _isLoading = false;
   String? _errorMessage;
   Timer? _syncTimer;
-  StreamSubscription<QuerySnapshot>? _productSubscription;
 
   List<Product> get products => _products;
   List<Category> get categories => _categories;
@@ -23,92 +20,68 @@ class ProductProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   ProductProvider() {
-    _startFirestoreListener();
-    _loadCategories(); // Categories still fetched via API/Initial
+    _loadInitialData();
     startSync();
   }
 
-  /// 🛰️ REAL-TIME LISTENER: Firestore → UI
-  void _startFirestoreListener() {
-    try {
-      _productSubscription?.cancel();
-      _productSubscription = _firestore
-          .collection('products')
-          .snapshots()
-          .listen((snapshot) {
-        _products = snapshot.docs.map((doc) {
-          final data = doc.data() as Map<String, dynamic>;
-          // Ensure ID is included in data for the factory
-          if (!data.containsKey('id')) data['id'] = doc.id;
-          return Product.fromJson(data);
-        }).toList();
-        
-        // Only fallback to demo data if absolutely necessary for first run
-        // Disabling for "Real Data" mode
-        /*
-        if (_products.isEmpty) {
-          _products = allProducts;
-        }
-        */
-        
-        notifyListeners();
-      }, onError: (e) {
-        print("❌ Firestore Listener Stream Error: $e");
-        // if (_products.isEmpty) _products = allProducts;
-        notifyListeners();
-      });
-    } catch (e) {
-      print("❌ Firestore Listener Setup Error: $e");
-      // if (_products.isEmpty) _products = allProducts;
-      notifyListeners();
-    }
+  /// 📥 INITIAL LOAD (API based)
+  Future<void> _loadInitialData() async {
+    _isLoading = true;
+    notifyListeners();
+
+    // 🚀 NO LOGIN: Skipping token generation as per request.
+    // The APIs now allow guest access.
+
+    await syncApiToFirebase();
+
+    _isLoading = false;
+    notifyListeners();
   }
 
-  /// 📦 CATEGORY INITIAL LOAD (API based)
-  Future<void> _loadCategories() async {
-    try {
-      _categories = await _repo.getCategories();
-      notifyListeners();
-    } catch (e) {
-      print("Category Load Error: $e");
-    }
-  }
-
-  /// 🔄 API → FIREBASE SYNC (SMART UPSERT)
+  /// 🔄 PUBLIC SYNC (For Manual Refresh)
   Future<void> syncApiToFirebase() async {
-    print("🚀 Starting API to Firebase Sync...");
-    try {
-      final apiProducts = await _repo.getProducts();
-      
-      for (var p in apiProducts) {
-        final docRef = _firestore.collection('products').doc(p.id.toString());
-        
-        // 🧠 SMART UPSERT: Check if changed before writing
-        final doc = await docRef.get();
-        final newData = p.toJson();
+    await Future.wait([
+      _loadProducts(),
+      _loadCategories(),
+    ]);
+    notifyListeners();
+  }
 
-        if (!doc.exists || doc.data().toString() != newData.toString()) {
-          await docRef.set(newData);
-          print("✅ Synced Product: ${p.name}");
-        }
+  /// 📦 FETCH PRODUCTS FROM API
+  Future<void> _loadProducts() async {
+    try {
+      final fetchedProducts = await _repo.getProducts();
+      if (fetchedProducts.isNotEmpty) {
+        _products = fetchedProducts;
+        _errorMessage = null;
       }
     } catch (e) {
-      print("⚠️ Sync Error: $e");
-      _errorMessage = "Sync Error: $e";
-      notifyListeners();
+      print("❌ Product API Load Error: $e");
+      _errorMessage = "Unable to refresh products. Please check your connection.";
     }
   }
 
-  /// ⏱️ SYNC TIMER MANAGEMENT (Memory Safe)
+  /// 📁 FETCH CATEGORIES FROM API
+  Future<void> _loadCategories() async {
+    try {
+      final fetchedCategories = await _repo.getCategories();
+      if (fetchedCategories.isNotEmpty) {
+        _categories = fetchedCategories;
+      }
+    } catch (e) {
+      print("❌ Category API Load Error: $e");
+    }
+  }
+
+  /// 🔄 PERIODIC API REFRESH (Replaces Firestore sync)
   void startSync() {
     _syncTimer?.cancel();
     
-    // Initial sync
-    syncApiToFirebase();
-    
-    // Periodic sync every 30 seconds
-    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      syncApiToFirebase();
+    // Refresh every 30 seconds
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      print("🔄 Refreshing products from API...");
+      await _loadProducts();
+      notifyListeners();
     });
   }
 
@@ -139,7 +112,6 @@ class ProductProvider with ChangeNotifier {
   @override
   void dispose() {
     _syncTimer?.cancel();
-    _productSubscription?.cancel();
     super.dispose();
   }
 }

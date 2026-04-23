@@ -25,6 +25,7 @@ class _ShopsExplorerScreenState extends State<ShopsExplorerScreen> {
 
     return Scaffold(
       backgroundColor: CuratorDesign.surfaceColor(context),
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -68,7 +69,7 @@ class _ShopsExplorerScreenState extends State<ShopsExplorerScreen> {
                             crossAxisCount: 2,
                             mainAxisSpacing: 16,
                             crossAxisSpacing: 16,
-                            childAspectRatio: 0.72,
+                            childAspectRatio: 0.68,
                           ),
                           delegate: SliverChildBuilderDelegate(
                             (context, index) => ProductCard(

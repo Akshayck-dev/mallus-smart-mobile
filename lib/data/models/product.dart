@@ -80,21 +80,47 @@ class Product {
       return _demoSellers[n % _demoSellers.length];
     }
 
+    // 🔥 SAFE DOUBLE PARSING: Handles numbers and strings
+    double safeDouble(dynamic value, {double fallback = 0.0}) {
+      if (value == null) return fallback;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? fallback;
+      return fallback;
+    }
+
+    // 🔥 IMAGE NORMALIZATION: Prepend base URL if it's a relative path
+    String normalizeImageUrl(String? path) {
+      if (path == null || path.isEmpty) return '';
+      if (path.startsWith('http')) return path;
+      // Ensure path starts with /
+      final formattedPath = path.startsWith('/') ? path : '/$path';
+      return "https://mallusmart.com$formattedPath";
+    }
+
     // 🔥 MAP FIELDS: Supporting MalluSmart Backend (productName, categoryName, etc) 
     // and maintaining Legacy formats.
+    final mainImage = normalizeImageUrl(
+      json['image'] ?? 
+      json['imageUrl'] ?? 
+      json['imagePath'] ?? 
+      (json['images'] is List && (json['images'] as List).isNotEmpty ? json['images'][0] : null)
+    );
+    
     return Product(
       id: rawId,
       name: json['productName'] ?? json['name'] ?? 'Undefined',
       category: json['categoryName'] ?? json['category'] ?? 'General',
       categoryId: json['categoryID'] ?? json['categoryId'] ?? 0,
       price: json.containsKey('priceCents') 
-          ? (json['priceCents'] ?? 0) / 100.0 
-          : (json['price'] ?? 0).toDouble(),
-      imageUrl: json['image'] ?? json['imageUrl'] ?? '',
+          ? safeDouble(json['priceCents']) / 100.0 
+          : safeDouble(json['price'] ?? json['unitPrice']),
+      imageUrl: mainImage,
       description: json['description'] ?? '',
-      stars: (json['stars'] ?? json['rating']?['stars'] ?? 4.5).toDouble(),
+      stars: safeDouble(json['stars'] ?? json['rating']?['stars'], fallback: 4.5),
       reviewCount: json['reviewCount'] ?? json['rating']?['count'] ?? 0,
-      gallery: json['gallery'] != null ? List<String>.from(json['gallery']) : null,
+      gallery: (json['gallery'] ?? json['images']) != null 
+          ? List<dynamic>.from(json['gallery'] ?? json['images']).map((e) => normalizeImageUrl(e.toString())).toList() 
+          : [mainImage],
       seller: resolvedSeller(rawId),
     );
   }

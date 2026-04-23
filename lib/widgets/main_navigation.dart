@@ -62,6 +62,7 @@ class _MainNavigationState extends State<MainNavigation> {
       key: _scaffoldKey,
       backgroundColor: CuratorDesign.surfaceColor(context),
       drawer: const PremiumDrawer(),
+      resizeToAvoidBottomInset: true,
       body: PersistentTabView(
         controller: _controller,
         tabs: _tabs(),
@@ -84,6 +85,9 @@ class _PremiumNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
+    if (isKeyboardOpen) return const SizedBox.shrink();
     
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 0, 24, bottomPadding > 0 ? bottomPadding : 24),

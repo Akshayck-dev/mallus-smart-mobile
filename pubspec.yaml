@@ -50,8 +50,6 @@ dependencies:
   persistent_bottom_nav_bar_v2: ^6.3.2
   smooth_page_indicator: ^2.0.1
   flutter_launcher_icons: ^0.14.4
-  firebase_core: ^4.7.0
-  cloud_firestore: ^6.3.0
 
 dev_dependencies:
   flutter_test:
@@ -112,6 +110,8 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/images/logo.png"
   adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/images/logo.png"
+  min_sdk_android: 21 # android >= 5.0
 
 flutter_native_splash:
   color: "#ffffff"

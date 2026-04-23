@@ -65,17 +65,26 @@ class PremiumDrawer extends StatelessWidget {
             height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: CuratorDesign.primaryGradient,
+              color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: CuratorDesign.primary.withValues(alpha: 0.3),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 15,
                   offset: const Offset(0, 5),
                 ),
               ],
+              border: Border.all(
+                color: CuratorDesign.primary.withValues(alpha: 0.1),
+                width: 2,
+              ),
             ),
-            child: const Center(
-              child: Icon(Icons.person_outline_rounded, size: 40, color: Colors.white),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/logo.png',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => 
+                   const Icon(Icons.person_outline_rounded, size: 40, color: Colors.grey),
+              ),
             ),
           ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
           const SizedBox(height: 24),
@@ -96,9 +105,9 @@ class PremiumDrawer extends StatelessWidget {
   Widget _buildNavigationItems(BuildContext context) {
     final items = [
       _DrawerItemData(Icons.home_outlined, "Home"),
-      _DrawerItemData(Icons.shopping_bag_outlined, "My Orders"),
-      _DrawerItemData(Icons.favorite_outline_rounded, "Favorites"),
-      _DrawerItemData(Icons.storefront_rounded, "Top Artisans"),
+      _DrawerItemData(Icons.shopping_cart_outlined, "Shop"),
+      _DrawerItemData(Icons.info_outline_rounded, "About Us"),
+      _DrawerItemData(Icons.quiz_outlined, "FAQ"),
       _DrawerItemData(Icons.help_outline_rounded, "Support"),
       _DrawerItemData(Icons.settings_outlined, "Settings"),
     ];

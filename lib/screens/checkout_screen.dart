@@ -86,6 +86,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     return Scaffold(
       backgroundColor: CuratorDesign.surfaceColor(context),
+      resizeToAvoidBottomInset: true,
       appBar: _buildAppBar(context),
       body: Stack(
         children: [
@@ -152,7 +153,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: _buildBottomActions(context, orderProvider),
+      bottomNavigationBar: MediaQuery.of(context).viewInsets.bottom > 0 
+          ? null 
+          : _buildBottomActions(context, orderProvider),
     );
   }
 

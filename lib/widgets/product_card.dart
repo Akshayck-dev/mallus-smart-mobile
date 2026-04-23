@@ -171,11 +171,11 @@ class _ProductCardState extends State<ProductCard> {
                         ],
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SizedBox(
-                        height: 105,
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(

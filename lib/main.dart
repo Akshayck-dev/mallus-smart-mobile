@@ -13,20 +13,10 @@ import 'package:mallu_smart/providers/language_provider.dart';
 import 'package:mallu_smart/providers/product_provider.dart';
 import 'package:mallu_smart/providers/order_provider.dart';
 import 'package:mallu_smart/screens/splash_screen.dart';
-import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  try {
-    print("🔥 Initializing Firebase...");
-    await Firebase.initializeApp();
-    print("✅ Firebase initialized successfully");
-  } catch (e) {
-    print("❌ Firebase Initialization Error: $e");
-    // We continue, but providers will need to handle this
-  }
-
   runApp(
     MultiProvider(
       providers: [
@@ -49,8 +39,6 @@ class MalluSmartApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-    
     return MaterialApp(
       title: 'Mallu Smart',
       debugShowCheckedModeBanner: false,
@@ -78,12 +66,10 @@ class _ConnectivityGateState extends State<ConnectivityGate> {
   @override
   void initState() {
     super.initState();
-    // Using a microtask to ensure provider is available and context is stable
     Future.microtask(() {
       _connectivityProvider = Provider.of<ConnectivityProvider>(context, listen: false);
       _connectivityProvider.addListener(_handleConnectivityChange);
       
-      // Initial check
       if (!_connectivityProvider.isConnected) {
         showConnectivityDialog(context);
       }
@@ -107,4 +93,3 @@ class _ConnectivityGateState extends State<ConnectivityGate> {
     return widget.child;
   }
 }
-

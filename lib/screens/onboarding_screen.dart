@@ -1,9 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mallu_smart/core/utils/design_system.dart';
+import 'package:mallu_smart/core/utils/size_config.dart';
 import 'package:mallu_smart/widgets/main_navigation.dart';
+import 'package:mallu_smart/models/onboarding_content.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -13,55 +15,38 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final PageController _controller = PageController();
-  int _currentIndex = 0;
-  Timer? _autoSlideTimer;
-
-  final List<Map<String, dynamic>> _pages = [
-    {
-      "icon": Icons.favorite_rounded,
-      "title": "Support Local Sellers",
-      "desc": "Empower Kerala artisans and discover authentic products crafted with care.",
-      "color": CuratorDesign.primary,
-    },
-    {
-      "icon": Icons.flash_on_rounded,
-      "title": "Fast & Secure Ordering",
-      "desc": "Enjoy a seamless shopping experience with quick delivery across Kerala.",
-      "color": CuratorDesign.secondary,
-    },
-    {
-      "icon": Icons.shopping_bag_rounded,
-      "title": "Discover Local Products",
-      "desc": "Find authentic Kerala products made by local sellers and micro-businesses.",
-      "color": CuratorDesign.primary,
-    },
-  ];
+  late PageController _controller;
 
   @override
   void initState() {
+    _controller = PageController();
     super.initState();
-    _startAutoSlide();
   }
 
-  @override
-  void dispose() {
-    _autoSlideTimer?.cancel();
-    _controller.dispose();
-    super.dispose();
-  }
+  int _currentPage = 0;
 
-  void _startAutoSlide() {
-    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
-      if (_currentIndex < _pages.length - 1) {
-        _controller.nextPage(
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOutQuart,
-        );
-      } else {
-        timer.cancel();
-      }
-    });
+  List<Color> colors = const [
+    Color(0xffDAD3C8),
+    Color(0xffFFE5DE),
+    Color(0xffDCF6E6),
+  ];
+
+  AnimatedContainer _buildDots({
+    int? index,
+  }) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(
+          Radius.circular(50),
+        ),
+        color: CuratorDesign.primary,
+      ),
+      margin: const EdgeInsets.only(right: 5),
+      height: 10,
+      curve: Curves.easeIn,
+      width: _currentPage == index ? 20 : 10,
+    );
   }
 
   Future<void> _completeOnboarding() async {
@@ -73,194 +58,170 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     Navigator.pushReplacement(
       context,
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const MainNavigation(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
+      MaterialPageRoute(builder: (context) => const MainNavigation()),
     );
-  }
-
-  void _nextPage() {
-    HapticFeedback.lightImpact();
-    if (_currentIndex < _pages.length - 1) {
-      _controller.nextPage(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutQuart,
-      );
-    } else {
-      _completeOnboarding();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    SizeConfig().init(context);
+    double width = SizeConfig.screenW!;
+    double height = SizeConfig.screenH!;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isDark 
-              ? [CuratorDesign.darkSurface, CuratorDesign.darkSurfaceLow]
-              : [const Color(0xFFF1F8E9), Colors.white],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              /// SKIP BUTTON
-              Align(
-                alignment: Alignment.topRight,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: TextButton(
-                    onPressed: _completeOnboarding,
-                    child: Text(
-                      "Skip",
-                      style: CuratorDesign.label(14, color: CuratorDesign.textSecondary(context)),
-                    ),
-                  ),
-                ),
-              ),
-
-              /// PAGE VIEW
-              Expanded(
-                child: PageView.builder(
-                  controller: _controller,
-                  itemCount: _pages.length,
-                  onPageChanged: (index) {
-                    setState(() => _currentIndex = index);
-                  },
-                  itemBuilder: (context, index) {
-                    final page = _pages[index];
-
-                    return Column(
+      backgroundColor: colors[_currentPage],
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              flex: 5,
+              child: PageView.builder(
+                physics: const BouncingScrollPhysics(),
+                controller: _controller,
+                onPageChanged: (value) => setState(() => _currentPage = value),
+                itemCount: contents.length,
+                itemBuilder: (context, i) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        /// ANIMATED ICON CARD
-                        AnimatedScale(
-                          scale: _currentIndex == index ? 1 : 0.85,
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeOutBack,
-                          child: Container(
-                            height: 240,
-                            width: 240,
-                            decoration: BoxDecoration(
-                              color: isDark 
-                                ? CuratorDesign.darkCard.withOpacity(0.5) 
-                                : Colors.white.withOpacity(0.8),
-                              borderRadius: BorderRadius.circular(40),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: (page["color"] as Color).withOpacity(0.15),
-                                  blurRadius: 40,
-                                  spreadRadius: 5,
-                                  offset: const Offset(0, 10),
-                                )
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                page["icon"],
-                                size: 90,
-                                color: page["color"],
-                              ),
-                            ),
+                        const Spacer(flex: 2),
+                        Flexible(
+                          flex: 10,
+                          child: Image.asset(
+                            contents[i].image,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(Icons.image_not_supported_rounded,
+                                    size: 120, color: CuratorDesign.primary),
                           ),
                         ),
-
-                        const SizedBox(height: 60),
-
-                        /// TITLE
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: Text(
-                            page["title"],
-                            textAlign: TextAlign.center,
-                            style: CuratorDesign.title(color: CuratorDesign.textPrimary(context))
-                                .copyWith(fontSize: 28),
+                        const Spacer(flex: 1),
+                        Text(
+                          contents[i].title,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.mulish(
+                            fontWeight: FontWeight.w800,
+                            fontSize: (width <= 550) ? 30 : 36,
+                            color: CuratorDesign.textPrimary(context),
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
-                        /// DESCRIPTION
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
                           child: Text(
-                            page["desc"],
+                            contents[i].desc,
+                            style: GoogleFonts.mulish(
+                              fontWeight: FontWeight.w500,
+                              fontSize: (width <= 550) ? 16 : 19,
+                              color: CuratorDesign.textSecondary(context),
+                              height: 1.5,
+                            ),
                             textAlign: TextAlign.center,
-                            style: CuratorDesign.subtitle(color: CuratorDesign.textSecondary(context))
-                                .copyWith(fontSize: 15, height: 1.6),
                           ),
                         ),
+                        const Spacer(flex: 3),
                       ],
-                    );
-                  },
-                ),
-              ),
-
-              /// DOT INDICATOR
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_pages.length, (index) {
-                  final isSelected = _currentIndex == index;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    height: 8,
-                    width: isSelected ? 24 : 8,
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? CuratorDesign.primary
-                          : CuratorDesign.primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
                     ),
                   );
-                }),
+                },
               ),
-
-              const SizedBox(height: 48),
-
-              /// NEXT BUTTON
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: GestureDetector(
-                  onTap: _nextPage,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 60,
-                    decoration: BoxDecoration(
-                      gradient: CuratorDesign.primaryGradient,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: CuratorDesign.primary.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        _currentIndex == _pages.length - 1
-                            ? "Get Started →"
-                            : "Next →",
-                        style: CuratorDesign.label(16, color: Colors.white),
+            ),
+            Expanded(
+              flex: 1,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      contents.length,
+                      (int index) => _buildDots(
+                        index: index,
                       ),
                     ),
                   ),
-                ),
+                  _currentPage + 1 == contents.length
+                      ? Padding(
+                          padding: const EdgeInsets.all(30),
+                          child: ElevatedButton(
+                            onPressed: _completeOnboarding,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: CuratorDesign.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              padding: (width <= 550)
+                                  ? const EdgeInsets.symmetric(
+                                      horizontal: 100, vertical: 20)
+                                  : EdgeInsets.symmetric(
+                                      horizontal: width * 0.2, vertical: 25),
+                              textStyle: TextStyle(
+                                  fontSize: (width <= 550) ? 13 : 17),
+                            ),
+                            child: const Text(
+                              "START",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.all(30),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  _controller.jumpToPage(2);
+                                },
+                                style: TextButton.styleFrom(
+                                  elevation: 0,
+                                  textStyle: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: (width <= 550) ? 13 : 17,
+                                  ),
+                                ),
+                                child: Text(
+                                  "SKIP",
+                                  style: TextStyle(
+                                      color: CuratorDesign.primary),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  _controller.nextPage(
+                                    duration:
+                                        const Duration(milliseconds: 200),
+                                    curve: Curves.easeIn,
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: CuratorDesign.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  elevation: 0,
+                                  padding: (width <= 550)
+                                      ? const EdgeInsets.symmetric(
+                                          horizontal: 30, vertical: 20)
+                                      : const EdgeInsets.symmetric(
+                                          horizontal: 30, vertical: 25),
+                                  textStyle: TextStyle(
+                                      fontSize: (width <= 550) ? 13 : 17),
+                                ),
+                                child: const Text(
+                                  "NEXT",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                ],
               ),
-
-              const SizedBox(height: 32),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
